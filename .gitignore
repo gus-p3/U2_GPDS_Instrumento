@@ -1,0 +1,54 @@
+# ==============================================================================
+# Documentación y archivos temporales externos
+# ==============================================================================
+docs/
+*.docx
+*.doc
+*.pdf
+temp_script_dump.txt
+
+# Archivos temporales de Office y del sistema
+~$*
+~*
+*.tmp
+
+# ==============================================================================
+# IDEs y Editores de código (Eclipse, IntelliJ, VS Code)
+# ==============================================================================
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.settings/
+.project
+.classpath
+.factorypath
+bin/
+**/bin/
+
+# ==============================================================================
+# Compilación y Artefactos Maven / Spring Boot
+# ==============================================================================
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# Archivos del Sistema Operativo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# ==============================================================================
+# Inclusiones explícitas
+# ==============================================================================
+!README.md
+!*.sql
