@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,15 +36,12 @@ public class ProyectosController {
 	}*/
 	
 	@GetMapping("/buscarProyecto")
-	public Proyectos getProyecto(@RequestParam int id_proyecto) {
-		
-		Proyectos buscar = new Proyectos();
+	public ResponseEntity<Proyectos> getProyecto(@RequestParam int id_proyecto) {
 		Optional<Proyectos> proyecto = proyectostable.findById(id_proyecto);
 		if(proyecto.isPresent()) {
-			buscar = proyecto.get();
+			return new ResponseEntity<>(proyecto.get(), HttpStatus.OK);
 		}
-		
-		return buscar;
+		return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
 	
 	@PostMapping("/addProyecto")
@@ -71,15 +70,13 @@ public class ProyectosController {
 	}
 	
 	@DeleteMapping("/deleteProyecto")
-	public int deleteProyecto(@RequestBody Proyectos proyecto) {
-		
-		int flag = 0;
-		if(!proyecto.equals(null)) {
-			proyectostable.delete(proyecto);
-			flag = 1;
+	public ResponseEntity<Object> deleteProyecto(@RequestBody Proyectos proyecto) {
+		if (proyecto == null || proyecto.getId_proyecto() == null || !proyectostable.existsById(proyecto.getId_proyecto())) {
+			return new ResponseEntity<>("Proyecto no encontrado", HttpStatus.NOT_FOUND);
 		}
 		
-		return flag;
+		proyectostable.delete(proyecto);
+		return new ResponseEntity<>(1, HttpStatus.OK);
 	}   
 	
 	@PostMapping("/buscarProyectos")

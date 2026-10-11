@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,45 +24,44 @@ public class UsuarioController {
 	UsuarioRepository usuariotable;
 	
 	@PostMapping("/getUsuarioLogin")
-	public Usuario getUsuarioLogin(@RequestBody Usuario userParam) {
+	public ResponseEntity<Usuario> getUsuarioLogin(@RequestBody Usuario userParam) {
+		if (userParam == null || userParam.getCorreo_electronico() == null || userParam.getContrasena() == null) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
 		
 		Optional<Usuario> optionaluser = usuariotable.findByCorreoPass(
 				userParam.getCorreo_electronico(),
 				userParam.getContrasena());
 		
-		Usuario user = new Usuario();
-		
 		if(optionaluser.isPresent()) {
-			user = optionaluser.get();
-		}else {
-			user.setNombre("000");
+			return new ResponseEntity<>(optionaluser.get(), HttpStatus.OK);
+		} else {
+			Usuario fallback = new Usuario();
+			fallback.setNombre("000");
+			return new ResponseEntity<>(fallback, HttpStatus.UNAUTHORIZED);
 		}
-		
-		return user;
 	}
 	
 	@GetMapping("/buscarUsuario")
-	public Usuario getUsuario(@RequestParam int id) {
-		
-		Usuario buscar = new Usuario();
+	public ResponseEntity<Usuario> getUsuario(@RequestParam int id) {
 		Optional<Usuario> usuario = usuariotable.findById(id);
-		if(usuario.isPresent())
-		{
-			buscar = usuario.get();
+		if(usuario.isPresent()) {
+			return new ResponseEntity<>(usuario.get(), HttpStatus.OK);
 		}
-		
-		return buscar;
+		return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
 	
 	@PostMapping("/addUsuario")
-	public int addUsuario(@RequestBody Usuario usuario) {
-		int flag = 0;
-		if(!usuario.equals(null)) {
-			usuariotable.save(usuario);
-			flag = 1;
+	public ResponseEntity<Object> addUsuario(@RequestBody Usuario usuario) {
+		if(usuario == null || 
+		   usuario.getNombre() == null || usuario.getNombre().trim().isEmpty() ||
+		   usuario.getCorreo_electronico() == null || !usuario.getCorreo_electronico().contains("@") ||
+		   usuario.getContrasena() == null || usuario.getContrasena().trim().isEmpty()) {
+			return new ResponseEntity<>("Datos inválidos o campos obligatorios faltantes", HttpStatus.BAD_REQUEST);
 		}
 		
-		return flag;
+		usuariotable.save(usuario);
+		return new ResponseEntity<>(1, HttpStatus.OK);
 	}
 	
 	@PostMapping("/updateUsuario")

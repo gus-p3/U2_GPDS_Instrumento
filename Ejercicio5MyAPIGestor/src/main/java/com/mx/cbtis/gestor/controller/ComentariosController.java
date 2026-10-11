@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,12 +16,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.mx.cbtis.gestor.modelo.Comentarios;
 import com.mx.cbtis.gestor.repository.ComentariosRepository;
+import com.mx.cbtis.gestor.repository.TareasRepository;
 
 @RestController
 public class ComentariosController {
 	
 	@Autowired
 	ComentariosRepository comentariostable;
+
+	@Autowired
+	TareasRepository tareastable;
 	
 	@PostMapping("/getComentario")
 
@@ -29,27 +35,26 @@ public class ComentariosController {
 	}
 	
 	@GetMapping("/buscarComentario")
-	public Comentarios getComentario(@RequestParam int id) {
-		
-		Comentarios buscar = new Comentarios();
+	public ResponseEntity<Comentarios> getComentario(@RequestParam int id) {
 		Optional<Comentarios> comentario = comentariostable.findById(id);
 		if(comentario.isPresent()) {
-			buscar = comentario.get();
+			return new ResponseEntity<>(comentario.get(), HttpStatus.OK);
 		}
-		
-		return buscar;
+		return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
 	
 	@PostMapping("/addComentario")
-	public int addComentario(@RequestBody Comentarios comentario) {
-		
-		int flag = 0;
-		if(!comentario.equals(null)) {
-			comentariostable.save(comentario);
-			flag = 1;
+	public ResponseEntity<Object> addComentario(@RequestBody Comentarios comentario) {
+		if(comentario == null || comentario.getId_tarea() == null) {
+			return new ResponseEntity<>("Datos incompletos para el comentario", HttpStatus.BAD_REQUEST);
 		}
 		
-		return flag;
+		if(!tareastable.existsById(comentario.getId_tarea())) {
+			return new ResponseEntity<>("La tarea referenciada no existe", HttpStatus.NOT_FOUND);
+		}
+		
+		comentariostable.save(comentario);
+		return new ResponseEntity<>(1, HttpStatus.OK);
 	}
 	
 	@PostMapping("/updateComentario")

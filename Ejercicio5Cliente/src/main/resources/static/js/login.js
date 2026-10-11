@@ -44,6 +44,13 @@ function validarLogin(){
 					localStorage.setItem("usuario", JSON.stringify(data));
 					window.location.href = 'inicio';
 				}
+			},
+			error: function(xhr, status, error) {
+				console.warn("Fallo de autenticación controlado:", status, error);
+				document.getElementById("exampleInputEmail1").focus();
+				var myToast = document.querySelector('#alerta5');
+				var toast = new bootstrap.Toast(myToast);
+				toast.show();
 			}
 		});
 	}

@@ -6,6 +6,8 @@ docs/
 *.doc
 *.pdf
 temp_script_dump.txt
+Postman_Casos_Error_Controlado.json
+Postman*.json
 
 # Archivos temporales de Office y del sistema
 ~$*
