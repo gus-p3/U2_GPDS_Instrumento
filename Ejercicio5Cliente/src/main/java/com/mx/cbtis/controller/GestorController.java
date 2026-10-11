@@ -22,9 +22,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.mx.cbtis.modelo.Asignaciones;
 import com.mx.cbtis.modelo.Comentarios;
 import com.mx.cbtis.modelo.Proyectos;
 import com.mx.cbtis.modelo.Tareas;
@@ -63,7 +65,10 @@ public class GestorController {
 	}
 
 	@PostMapping("/saveUsuario")
-	public ModelAndView setSaveUsuario(@Valid @ModelAttribute Usuario usuario, BindingResult bindingResult) {
+	public ModelAndView setSaveUsuario(
+			@Valid @ModelAttribute Usuario usuario,
+			BindingResult bindingResult,
+			@RequestParam(value = "archivoAvatar", required = false) MultipartFile archivoAvatar) {
 		if (bindingResult != null && bindingResult.hasErrors()) {
 			ModelAndView mav = new ModelAndView("register");
 			mav.addObject("usuario", usuario);
@@ -72,14 +77,31 @@ public class GestorController {
 		}
 
 		try {
+			if (archivoAvatar != null && !archivoAvatar.isEmpty()) {
+				String rutaDirectorio = "src/main/resources/static/Images/avatars/";
+				java.nio.file.Path rutaPath = java.nio.file.Paths.get(rutaDirectorio);
+
+				if (!java.nio.file.Files.exists(rutaPath)) {
+					java.nio.file.Files.createDirectories(rutaPath);
+				}
+				String nombreArchivo = java.util.UUID.randomUUID() + "_" + archivoAvatar.getOriginalFilename();
+				java.nio.file.Path destino = rutaPath.resolve(nombreArchivo);
+				java.nio.file.Files.copy(archivoAvatar.getInputStream(), destino, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+				usuario.setImagen_usuario("Images/avatars/" + nombreArchivo);
+			} else if (usuario.getImagen_usuario() == null || usuario.getImagen_usuario().trim().isEmpty()) {
+				usuario.setImagen_usuario("Images/logo.png");
+			}
 			RestTemplate template = new RestTemplate();
 			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/addUsuario";
 			template.postForEntity(urlservicebd, usuario, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error al registrar usuario: " + e.getMessage());
+			System.err.println("Error al procesar avatar o guardar usuario: " + e.getMessage());
 		}
-
 		return new ModelAndView("redirect:/login");
+	}
+
+	public ModelAndView setSaveUsuario(Usuario usuario, BindingResult bindingResult) {
+		return setSaveUsuario(usuario, bindingResult, null);
 	}
 
 	public ModelAndView setSaveUsuario(Usuario usuario) {
@@ -90,7 +112,7 @@ public class GestorController {
 		    usuario.getContrasena() == null || usuario.getContrasena().trim().isEmpty()) {
 			result.reject("invalido", "Datos incompletos o inválidos");
 		}
-		return setSaveUsuario(usuario, result);
+		return setSaveUsuario(usuario, result, null);
 	}
 	
 	@GetMapping("/inicio")
@@ -400,6 +422,34 @@ public class GestorController {
 			return new ResponseEntity<Object>(comentarios, HttpStatus.OK);
 		} catch (Exception e) {
 			System.err.println("Error al consultar comentarios: " + e.getMessage());
+			return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
+		}
+	}
+	
+	@PostMapping("/updateAsignacion")
+	public ResponseEntity<Integer> updateAsignacion(@RequestBody Asignaciones asignacion) {
+		try {
+			RestTemplate template = new RestTemplate();
+			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/updateAsignacion";
+			return template.postForEntity(urlservicebd, asignacion, Integer.class);
+		} catch (Exception e) {
+			System.err.println("Error al actualizar asignación: " + e.getMessage());
+			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	@PostMapping("/consultarAsignaciones")
+	public ResponseEntity<Object> consultarAsignaciones() {
+		RestTemplate template = new RestTemplate();
+		String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/buscarAsignaciones";
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		try {
+			Asignaciones[] response = template.postForObject(urlservicebd, headers, Asignaciones[].class);
+			List<Asignaciones> lista = (response != null) ? Arrays.asList(response) : Collections.emptyList();
+			return new ResponseEntity<Object>(lista, HttpStatus.OK);
+		} catch (Exception e) {
+			System.err.println("Error al consultar asignaciones: " + e.getMessage());
 			return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
 		}
 	}

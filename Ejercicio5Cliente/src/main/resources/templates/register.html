@@ -26,7 +26,10 @@
 
     <!--Registro-->
     <div class="container m-auto">
-        <form class="p-5 bg-light bg-opacity-75 rounded mt-5 needs-validation" novalidate method="post" th:action="saveUsuario" th:object="${usuario}">
+        <form class="p-5 bg-light bg-opacity-75 rounded mt-5 needs-validation"
+              novalidate method="post"
+              th:action="saveUsuario" th:object="${usuario}"
+              enctype="multipart/form-data">
             <h2>Registrate</h2>
             <div class="mb-3">
                 <label class="form-label">Nombre(completo)</label>
@@ -52,7 +55,11 @@
 				  <option value="Otro">Otro</option>
 			  </select>
             </div>
-            <input type="hidden" id="imagenUsuario" th:field="*{imagen_usuario}">
+
+            <div class="mb-3">
+                <label for="archivoAvatar" class="form-label">Foto de perfil (Avatar)</label>
+                <input type="file" class="form-control" id="archivoAvatar" name="archivoAvatar" accept="image/png, image/jpeg, image/webp">
+            </div>
             <button type="submit" class="btn btn-primary" th:onclick="getRandomColor();">Registrar</button>
           </form>
     </div>
