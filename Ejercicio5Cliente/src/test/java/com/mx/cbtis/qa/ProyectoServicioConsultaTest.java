@@ -26,69 +26,58 @@ import org.springframework.web.client.RestTemplate;
 import com.mx.cbtis.controller.GestorController;
 import com.mx.cbtis.modelo.Proyectos;
 
-/**
- * Pruebas automáticas para el servicio/endpoint de consulta de proyectos.
- * Valida el consumo simulado del endpoint POST /buscarProyectos hacia la API REST.
- */
-public class ProyectoServicioConsultaTest {
+@SuppressWarnings("java:S100")
+class ProyectoServicioConsultaTest {
 
-    private GestorController gestorController;
+	private GestorController gestorController;
 
-    @BeforeEach
-    void setUp() {
-        gestorController = new GestorController();
-    }
+	@BeforeEach
+	void setUp() {
+		gestorController = new GestorController();
+	}
 
-    @Test
-    @DisplayName("AUT-E01 - Servicio de consulta: el backend (simulado) responde con lista válida y código 200")
-    public void AUT_E01_consultarProyectos_exito() {
-        // GIVEN: El backend simulado responde con código 200 y una lista válida de 2 proyectos
-        Proyectos p1 = new Proyectos(1, "Proyecto Alpha", "Descripción Alpha", "2024-01-01", "2024-06-01", "En proceso", "#FF5733");
-        Proyectos p2 = new Proyectos(2, "Proyecto Beta", "Descripción Beta", "2024-02-01", "2024-08-01", "Finalizado", "#33FF57");
-        Proyectos[] proyectosSimulados = new Proyectos[] { p1, p2 };
+	@Test
+	@DisplayName("AUT-E01 - Servicio de consulta: el backend (simulado) responde con lista válida y código 200")
+	void AUT_E01_consultarProyectos_exito() {
+		Proyectos p1 = new Proyectos(1, "Proyecto Alpha", "Descripción Alpha", "2024-01-01", "2024-06-01", "En proceso", "#FF5733");
+		Proyectos p2 = new Proyectos(2, "Proyecto Beta", "Descripción Beta", "2024-02-01", "2024-08-01", "Finalizado", "#33FF57");
+		Proyectos[] proyectosSimulados = new Proyectos[] { p1, p2 };
 
-        Model model = new ConcurrentModel();
+		Model model = new ConcurrentModel();
 
-        try (MockedConstruction<RestTemplate> mocked = Mockito.mockConstruction(RestTemplate.class, (mock, context) -> {
-            when(mock.postForObject(eq("http://localhost:8081/buscarProyectos"), any(), eq(Proyectos[].class)))
-                .thenReturn(proyectosSimulados);
-        })) {
-            // WHEN: Se invoca el método de consulta de proyectos
-            ResponseEntity<Object> respuesta = gestorController.consultarProyectos(model);
+		try (MockedConstruction<RestTemplate> mocked = Mockito.mockConstruction(RestTemplate.class, (mock, context) -> {
+			when(mock.postForObject(eq("http://localhost:8081/buscarProyectos"), any(), eq(Proyectos[].class)))
+				.thenReturn(proyectosSimulados);
+		})) {
+			ResponseEntity<Object> respuesta = gestorController.consultarProyectos(model);
 
-            // THEN: El servicio procesa la respuesta y devuelve la lista completa sin excepciones
-            assertNotNull(respuesta, "La respuesta no debe ser nula");
-            assertEquals(HttpStatus.OK.value(), respuesta.getStatusCode().value(), "El código de respuesta debe ser 200");
-            
-            @SuppressWarnings("unchecked")
-            List<Proyectos> resultado = (List<Proyectos>) respuesta.getBody();
-            assertNotNull(resultado, "El cuerpo de la respuesta debe contener la lista");
-            assertEquals(2, resultado.size(), "Debe devolver exactamente los 2 proyectos simulados");
-            assertEquals("Proyecto Alpha", resultado.get(0).getNombre());
-            
-            // Verificación del modelo para la vista
-            assertTrue(model.containsAttribute("listaProyectos"), "El modelo debe contener el atributo 'listaProyectos'");
-        }
-    }
+			assertNotNull(respuesta, "La respuesta no debe ser nula");
+			assertEquals(HttpStatus.OK.value(), respuesta.getStatusCode().value(), "El código de respuesta debe ser 200");
 
-    @Test
-    @DisplayName("AUT-F01 - Servicio de consulta: el backend (simulado) responde error 500 o no disponible")
-    public void AUT_F01_consultarProyectos_backendError500() {
-        // GIVEN: El backend simulado responde con error interno 500
-        Model model = new ConcurrentModel();
+			@SuppressWarnings("unchecked")
+			List<Proyectos> resultado = (List<Proyectos>) respuesta.getBody();
+			assertNotNull(resultado, "El cuerpo de la respuesta debe contener la lista");
+			assertEquals(2, resultado.size(), "Debe devolver exactamente los 2 proyectos simulados");
+			assertEquals("Proyecto Alpha", resultado.get(0).getNombre());
 
-        try (MockedConstruction<RestTemplate> mocked = Mockito.mockConstruction(RestTemplate.class, (mock, context) -> {
-            when(mock.postForObject(eq("http://localhost:8081/buscarProyectos"), any(), eq(Proyectos[].class)))
-                .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno en el backend"));
-        })) {
-            // WHEN & THEN: El error debe capturarse y controlarse (lista vacía o mensaje) sin romper la aplicación con una excepción no controlada
-            // NOTA: Si el controlador no implementa try-catch (defecto), esta aserción fallará evidenciando el fallo real.
-            ResponseEntity<Object> respuesta = assertDoesNotThrow(() -> {
-                return gestorController.consultarProyectos(model);
-            }, "El controlador debe capturar la falla del backend y no propagar una excepción no controlada");
+			assertTrue(model.containsAttribute("listaProyectos"), "El modelo debe contener el atributo 'listaProyectos'");
+		}
+	}
 
-            assertNotNull(respuesta, "Debe retornar una respuesta controlada ante error del backend");
-            assertFalse(respuesta.getStatusCode().is2xxSuccessful(), "El código no debe indicar éxito si el backend falló");
-        }
-    }
+	@Test
+	@DisplayName("AUT-F01 - Servicio de consulta: el backend (simulado) responde error 500 o no disponible")
+	void AUT_F01_consultarProyectos_backendError500() {
+		Model model = new ConcurrentModel();
+
+		try (MockedConstruction<RestTemplate> mocked = Mockito.mockConstruction(RestTemplate.class, (mock, context) -> {
+			when(mock.postForObject(eq("http://localhost:8081/buscarProyectos"), any(), eq(Proyectos[].class)))
+				.thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno en el backend"));
+		})) {
+			ResponseEntity<Object> respuesta = assertDoesNotThrow(() -> gestorController.consultarProyectos(model),
+				"El controlador debe capturar la falla del backend y no propagar una excepción no controlada");
+
+			assertNotNull(respuesta, "Debe retornar una respuesta controlada ante error del backend");
+			assertFalse(respuesta.getStatusCode().is2xxSuccessful(), "El código no debe indicar éxito si el backend falló");
+		}
+	}
 }

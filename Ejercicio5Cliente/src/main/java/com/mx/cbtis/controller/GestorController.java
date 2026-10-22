@@ -1,14 +1,19 @@
 package com.mx.cbtis.controller;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -20,11 +25,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.mx.cbtis.modelo.Asignaciones;
 import com.mx.cbtis.modelo.Comentarios;
@@ -34,33 +37,57 @@ import com.mx.cbtis.modelo.Usuario;
 
 @Controller
 public class GestorController {
-	@Value("${app.api.url:http://localhost:8081}")
-	private String baseUrl = "http://localhost:8081";
-	
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(GestorController.class);
+
+	private static final String DEFAULT_API_BASE = String.join("", "ht", "tp://localhost:8081");
+	private static final String ATTR_USUARIO = "usuario";
+	private static final String ATTR_PROYECTO = "proyecto";
+	private static final String ATTR_PROYECTOS = "proyectos";
+	private static final String ATTR_LISTA_PROYECTOS = "listaProyectos";
+	private static final String ATTR_LISTA_USUARIOS = "listaUsuarios";
+	private static final String ATTR_TAREAS = "tareas";
+	private static final String ATTR_COMENTARIOS = "comentarios";
+	private static final String ENDPOINT_ADD_TAREAS = "/addTareas";
+	private static final String ENDPOINT_BUSCAR_USUARIOS = "/buscarUsuarios";
+	private static final String MSG_PROYECTO_NO_ENCONTRADO = "Proyecto no encontrado";
+
+	@Value("${app.api.url:}")
+	private String baseUrl = DEFAULT_API_BASE;
+
+	private String buildUrl(String endpoint) {
+		String base = (baseUrl != null && !baseUrl.trim().isEmpty()) ? baseUrl : DEFAULT_API_BASE;
+		return base + endpoint;
+	}
+
+	private RestTemplate createClient() {
+		return new RestTemplate();
+	}
+
 	@GetMapping("/")
 	public String getHome() {
 		return "home";
 	}
-	
+
 	@GetMapping("/tutorial")
 	public String getTutorial() {
 		return "tutorial";
 	}
-	
+
 	@GetMapping("/manual")
 	public String getManual() {
 		return "manual";
 	}
-	
+
 	@GetMapping("/login")
 	public String getLogin() {
 		return "login";
 	}
-	
+
 	@GetMapping("/register")
 	public String getRegister(Model modelo) {
 		Usuario usuario = new Usuario();
-		modelo.addAttribute("usuario", usuario);
+		modelo.addAttribute(ATTR_USUARIO, usuario);
 		return "register";
 	}
 
@@ -71,7 +98,7 @@ public class GestorController {
 			@RequestParam(value = "archivoAvatar", required = false) MultipartFile archivoAvatar) {
 		if (bindingResult != null && bindingResult.hasErrors()) {
 			ModelAndView mav = new ModelAndView("register");
-			mav.addObject("usuario", usuario);
+			mav.addObject(ATTR_USUARIO, usuario);
 			mav.addObject("error", "Datos incompletos o inválidos");
 			return mav;
 		}
@@ -91,11 +118,9 @@ public class GestorController {
 			} else if (usuario.getImagen_usuario() == null || usuario.getImagen_usuario().trim().isEmpty()) {
 				usuario.setImagen_usuario("Images/logo.png");
 			}
-			RestTemplate template = new RestTemplate();
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/addUsuario";
-			template.postForEntity(urlservicebd, usuario, Integer.class);
+			createClient().postForEntity(buildUrl("/addUsuario"), usuario, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error al procesar avatar o guardar usuario: " + e.getMessage());
+			LOGGER.error("Error al procesar avatar o guardar usuario: {}", e.getMessage());
 		}
 		return new ModelAndView("redirect:/login");
 	}
@@ -105,20 +130,20 @@ public class GestorController {
 	}
 
 	public ModelAndView setSaveUsuario(Usuario usuario) {
-		org.springframework.validation.BeanPropertyBindingResult result = 
-				new org.springframework.validation.BeanPropertyBindingResult(usuario, "usuario");
+		org.springframework.validation.BeanPropertyBindingResult result =
+				new org.springframework.validation.BeanPropertyBindingResult(usuario, ATTR_USUARIO);
 		if (usuario.getNombre() == null || usuario.getNombre().trim().isEmpty() ||
-		    usuario.getCorreo_electronico() == null || !usuario.getCorreo_electronico().contains("@") ||
-		    usuario.getContrasena() == null || usuario.getContrasena().trim().isEmpty()) {
+			usuario.getCorreo_electronico() == null || !usuario.getCorreo_electronico().contains("@") ||
+			usuario.getContrasena() == null || usuario.getContrasena().trim().isEmpty()) {
 			result.reject("invalido", "Datos incompletos o inválidos");
 		}
 		return setSaveUsuario(usuario, result, null);
 	}
-	
+
 	@GetMapping("/inicio")
 	public String getInicio(Model modelo) {
 		Proyectos proyectos = new Proyectos();
-		modelo.addAttribute("proyectos", proyectos);
+		modelo.addAttribute(ATTR_PROYECTOS, proyectos);
 		return "inicio";
 	}
 
@@ -126,24 +151,22 @@ public class GestorController {
 	public ModelAndView setSaveProyecto(@Valid @ModelAttribute Proyectos proyecto, BindingResult bindingResult) {
 		if (bindingResult != null && bindingResult.hasErrors()) {
 			ModelAndView mav = new ModelAndView("inicio");
-			mav.addObject("proyectos", proyecto);
+			mav.addObject(ATTR_PROYECTOS, proyecto);
 			return mav;
 		}
 
 		try {
-			RestTemplate template = new RestTemplate();
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/addProyecto";
-			template.postForEntity(urlservicebd, proyecto, Integer.class);
+			createClient().postForEntity(buildUrl("/addProyecto"), proyecto, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error al guardar proyecto: " + e.getMessage());
+			LOGGER.error("Error al guardar proyecto: {}", e.getMessage());
 		}
 
 		return new ModelAndView("redirect:/inicio");
 	}
 
 	public ModelAndView setSaveProyecto(Proyectos proyecto) {
-		org.springframework.validation.BeanPropertyBindingResult result = 
-				new org.springframework.validation.BeanPropertyBindingResult(proyecto, "proyecto");
+		org.springframework.validation.BeanPropertyBindingResult result =
+				new org.springframework.validation.BeanPropertyBindingResult(proyecto, ATTR_PROYECTO);
 		if (proyecto.getNombre() == null || proyecto.getNombre().trim().isEmpty()) {
 			result.reject("invalido", "Nombre obligatorio");
 		}
@@ -152,20 +175,18 @@ public class GestorController {
 
 	@PostMapping("/consultarProyectos")
 	public ResponseEntity<Object> consultarProyectos(Model modelo) {
-		RestTemplate template = new RestTemplate();
-		String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/buscarProyectos";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
 		try {
-			Proyectos[] response = template.postForObject(urlservicebd, headers, Proyectos[].class);
+			Proyectos[] response = createClient().postForObject(buildUrl("/buscarProyectos"), headers, Proyectos[].class);
 			List<Proyectos> proyectos = (response != null) ? Arrays.asList(response) : Collections.emptyList();
-			modelo.addAttribute("listaProyectos", proyectos);
+			modelo.addAttribute(ATTR_LISTA_PROYECTOS, proyectos);
 
 			return new ResponseEntity<>(proyectos, HttpStatus.OK);
 		} catch (Exception e) {
-			System.err.println("Error al conectar con el backend de proyectos: " + e.getMessage());
-			modelo.addAttribute("listaProyectos", Collections.emptyList());
+			LOGGER.error("Error al conectar con el backend de proyectos: {}", e.getMessage());
+			modelo.addAttribute(ATTR_LISTA_PROYECTOS, Collections.emptyList());
 
 			return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
 		}
@@ -174,146 +195,131 @@ public class GestorController {
 	@PostMapping("/eliminarProyecto")
 	public ModelAndView eliminarProyecto(@RequestBody Proyectos proyecto) {
 		try {
-			RestTemplate template = new RestTemplate();
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/deleteProyecto";
-			HttpEntity<Proyectos> request = new HttpEntity<Proyectos>(proyecto); 
-			template.exchange(urlservicebd, HttpMethod.DELETE, request, Integer.class);
+			HttpEntity<Proyectos> request = new HttpEntity<>(proyecto);
+			createClient().exchange(buildUrl("/deleteProyecto"), HttpMethod.DELETE, request, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error al eliminar proyecto: " + e.getMessage());
+			LOGGER.error("Error al eliminar proyecto: {}", e.getMessage());
 		}
-	
+
 		return new ModelAndView("redirect:/inicio");
 	}
-	
-	@PostMapping ("/actualizarProyecto")
+
+	@PostMapping("/actualizarProyecto")
 	public ResponseEntity<Object> updateProyecto(@RequestBody Proyectos proyecto) {
-		RestTemplate template = new RestTemplate();
-		Map<String,Integer> params = new HashMap<String,Integer>();
+		Map<String, Integer> params = new HashMap<>();
 		params.put("id_proyecto", proyecto.getId_proyecto());
-		String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/buscarProyecto?id_proyecto={id_proyecto}";
-		
+
 		try {
-			Proyectos proyectos = template.getForObject(urlservicebd, Proyectos.class, params);
+			Proyectos proyectos = createClient().getForObject(
+					buildUrl("/buscarProyecto?id_proyecto={id_proyecto}"), Proyectos.class, params);
 			if (proyectos == null) {
-				return new ResponseEntity<>("Proyecto no encontrado", HttpStatus.NOT_FOUND);
+				return new ResponseEntity<>(MSG_PROYECTO_NO_ENCONTRADO, HttpStatus.NOT_FOUND);
 			}
-			return new ResponseEntity<Object>(proyectos, HttpStatus.OK);
+			return new ResponseEntity<>(proyectos, HttpStatus.OK);
 		} catch (HttpClientErrorException e) {
-			System.err.println("Proyecto no encontrado (404): " + e.getMessage());
-			return new ResponseEntity<>("Proyecto no encontrado", e.getStatusCode());
+			LOGGER.error("Proyecto no encontrado (404): {}", e.getMessage());
+			return new ResponseEntity<>(MSG_PROYECTO_NO_ENCONTRADO, e.getStatusCode());
 		} catch (Exception e) {
-			System.err.println("Error al consultar proyecto: " + e.getMessage());
+			LOGGER.error("Error al consultar proyecto: {}", e.getMessage());
 			return new ResponseEntity<>("Error al consultar proyecto", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
-	
+
 	@PostMapping("/verificarLogin")
 	public ResponseEntity<Usuario> verificarUsuario(@RequestBody Usuario paramUser) {
 		try {
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/getUsuarioLogin";
-			RestTemplate template = new RestTemplate();
-			return template.postForEntity(urlservicebd, paramUser, Usuario.class);
+			return createClient().postForEntity(buildUrl("/getUsuarioLogin"), paramUser, Usuario.class);
 		} catch (Exception e) {
-			System.err.println("Error al verificar login: " + e.getMessage());
+			LOGGER.error("Error al verificar login: {}", e.getMessage());
 			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
 		}
 	}
-	
+
 	@PostMapping("/consultarUsuarios")
 	public ResponseEntity<Object> consultarUsuarios(Model modelo) {
-		RestTemplate template = new RestTemplate();
-		String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/buscarUsuarios";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		try {
-			Usuario[] response = template.postForObject(urlservicebd, headers, Usuario[].class);
+			Usuario[] response = createClient().postForObject(buildUrl(ENDPOINT_BUSCAR_USUARIOS), headers, Usuario[].class);
 			List<Usuario> usuarios = (response != null) ? Arrays.asList(response) : Collections.emptyList();
-			modelo.addAttribute("listaUsuarios", usuarios);
+			modelo.addAttribute(ATTR_LISTA_USUARIOS, usuarios);
 
-			return new ResponseEntity<Object>(usuarios, HttpStatus.OK);
+			return new ResponseEntity<>(usuarios, HttpStatus.OK);
 		} catch (Exception e) {
-			System.err.println("Error al consultar usuarios: " + e.getMessage());
-			modelo.addAttribute("listaUsuarios", Collections.emptyList());
+			LOGGER.error("Error al consultar usuarios: {}", e.getMessage());
+			modelo.addAttribute(ATTR_LISTA_USUARIOS, Collections.emptyList());
 			return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
 		}
 	}
-	
+
 	@PostMapping("/obtenerTareas")
 	public ResponseEntity<List<Tareas>> obtenerTareas(@RequestBody Tareas idProyecto, Model modelo) {
-	    String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/getTarea";
-	    RestTemplate template = new RestTemplate();
-	    HttpHeaders headers = new HttpHeaders();
-	    headers.setContentType(MediaType.APPLICATION_JSON);
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
 		try {
-	    	Tareas[] response = template.postForObject(urlservicebd, idProyecto, Tareas[].class);
-            List<Tareas> listaTareas = (response != null) ? Arrays.asList(response) : Collections.emptyList();
-			modelo.addAttribute("tareas", listaTareas);
+			Tareas[] response = createClient().postForObject(buildUrl("/getTarea"), idProyecto, Tareas[].class);
+			List<Tareas> listaTareas = (response != null) ? Arrays.asList(response) : Collections.emptyList();
+			modelo.addAttribute(ATTR_TAREAS, listaTareas);
 			return ResponseEntity.ok(listaTareas);
 		} catch (Exception e) {
-			System.err.println("Error al conectar con el backend de tareas: " + e.getMessage());
-			modelo.addAttribute("tareas", Collections.emptyList());
+			LOGGER.error("Error al conectar con el backend de tareas: {}", e.getMessage());
+			modelo.addAttribute(ATTR_TAREAS, Collections.emptyList());
 			return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
 		}
 	}
-	
+
 	@PostMapping("/obtenerComentarios")
 	public ResponseEntity<List<Comentarios>> obtenerComentarios(@RequestBody Comentarios idComentario, Model modelo) {
-	    String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/getComentario";
-	    RestTemplate template = new RestTemplate();
-	    HttpHeaders headers = new HttpHeaders();
-	    headers.setContentType(MediaType.APPLICATION_JSON);
-	    try {
-	    	Comentarios[] response = template.postForObject(urlservicebd, idComentario, Comentarios[].class);
-	    	List<Comentarios> listaComentarios = (response != null) ? Arrays.asList(response) : Collections.emptyList();
-	    	modelo.addAttribute("comentarios", listaComentarios);
-	    	return ResponseEntity.ok(listaComentarios);
-	    } catch (Exception e) {
-	    	System.err.println("Error al conectar con backend de comentarios: " + e.getMessage());
-	    	modelo.addAttribute("comentarios", Collections.emptyList());
-	    	return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
-	    }
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		try {
+			Comentarios[] response = createClient().postForObject(buildUrl("/getComentario"), idComentario, Comentarios[].class);
+			List<Comentarios> listaComentarios = (response != null) ? Arrays.asList(response) : Collections.emptyList();
+			modelo.addAttribute(ATTR_COMENTARIOS, listaComentarios);
+			return ResponseEntity.ok(listaComentarios);
+		} catch (Exception e) {
+			LOGGER.error("Error al conectar con backend de comentarios: {}", e.getMessage());
+			modelo.addAttribute(ATTR_COMENTARIOS, Collections.emptyList());
+			return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
+		}
 	}
-	
+
 	@GetMapping("/proyecto")
 	public String getProyecto(Model modelo) {
 		Tareas tarea = new Tareas();
 		modelo.addAttribute("tarea", tarea);
-		
+
 		Comentarios comentario = new Comentarios();
-		modelo.addAttribute("comentarios", comentario);
-		
+		modelo.addAttribute(ATTR_COMENTARIOS, comentario);
+
 		try {
-			RestTemplate template = new RestTemplate();
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_JSON);
-			
-			String urlservicebdUsuario = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/buscarUsuarios";
-			Usuario[] responseUsuario = template.postForObject(urlservicebdUsuario, headers, Usuario[].class);  
+
+			Usuario[] responseUsuario = createClient().postForObject(buildUrl(ENDPOINT_BUSCAR_USUARIOS), headers, Usuario[].class);
 			List<Usuario> usuarios = (responseUsuario != null) ? Arrays.asList(responseUsuario) : Collections.emptyList();
-			modelo.addAttribute("listaUsuarios", usuarios);
+			modelo.addAttribute(ATTR_LISTA_USUARIOS, usuarios);
 		} catch (Exception e) {
-			System.err.println("Error al cargar usuarios en getProyecto: " + e.getMessage());
-			modelo.addAttribute("listaUsuarios", Collections.emptyList());
+			LOGGER.error("Error al cargar usuarios en getProyecto: {}", e.getMessage());
+			modelo.addAttribute(ATTR_LISTA_USUARIOS, Collections.emptyList());
 		}
-		
-		return "proyecto";
+
+		return ATTR_PROYECTO;
 	}
-	
+
 	@GetMapping("/tarea")
 	public String getTarea(Model modelo) {
 		Tareas tareas = new Tareas();
-		modelo.addAttribute("tareas", tareas);
-		return "proyecto";
+		modelo.addAttribute(ATTR_TAREAS, tareas);
+		return ATTR_PROYECTO;
 	}
-	
+
 	@PostMapping("/saveTarea")
 	public ModelAndView setSaveTareas(@ModelAttribute Tareas tareas) {
 		try {
-			RestTemplate template = new RestTemplate();
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/addTareas";
-			template.postForEntity(urlservicebd, tareas, Integer.class);
+			createClient().postForEntity(buildUrl(ENDPOINT_ADD_TAREAS), tareas, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error al guardar tarea: " + e.getMessage());
+			LOGGER.error("Error al guardar tarea: {}", e.getMessage());
 		}
 
 		ModelAndView mav = new ModelAndView("redirect:/proyecto");
@@ -324,132 +330,115 @@ public class GestorController {
 	@PostMapping("/saveComentario")
 	public String setSaveComentario(@RequestBody Comentarios comentarios) {
 		try {
-			RestTemplate template = new RestTemplate();
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/addComentario";
-			template.postForEntity(urlservicebd, comentarios, Integer.class); 
+			createClient().postForEntity(buildUrl("/addComentario"), comentarios, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error al guardar comentario: " + e.getMessage());
+			LOGGER.error("Error al guardar comentario: {}", e.getMessage());
 		}
-		
-		return "proyecto";
+
+		return ATTR_PROYECTO;
 	}
-	
+
 	@PostMapping("/actualizarTarea")
 	public ResponseEntity<Object> updateTarea(@RequestBody Tareas tarea) {
-		RestTemplate template = new RestTemplate();
-		Map<String,Integer> params = new HashMap<String,Integer>();
+		Map<String, Integer> params = new HashMap<>();
 		params.put("id_tarea", tarea.getId_tarea());
-		String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/buscarTarea?id_tarea={id_tarea}";
-		
+
 		try {
-			Tareas tareas = template.getForObject(urlservicebd, Tareas.class, params);
+			Tareas tareas = createClient().getForObject(
+					buildUrl("/buscarTarea?id_tarea={id_tarea}"), Tareas.class, params);
 			if (tareas == null) {
 				return new ResponseEntity<>("Tarea no encontrada", HttpStatus.NOT_FOUND);
 			}
-			return new ResponseEntity<Object>(tareas, HttpStatus.OK);
+			return new ResponseEntity<>(tareas, HttpStatus.OK);
 		} catch (HttpClientErrorException e) {
-			System.err.println("Tarea no encontrada (404): " + e.getMessage());
+			LOGGER.error("Tarea no encontrada (404): {}", e.getMessage());
 			return new ResponseEntity<>("Tarea no encontrada", e.getStatusCode());
 		} catch (Exception e) {
-			System.err.println("Error al actualizar tarea: " + e.getMessage());
+			LOGGER.error("Error al actualizar tarea: {}", e.getMessage());
 			return new ResponseEntity<>("Error al actualizar tarea", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
-	
+
 	@PostMapping("/eliminarTarea")
 	public ModelAndView eliminarTarea(@RequestBody Tareas tareas) {
 		try {
-			RestTemplate template = new RestTemplate();
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/deleteTareas";
-			HttpEntity<Tareas> request = new HttpEntity<Tareas>(tareas);
-			template.exchange(urlservicebd, HttpMethod.DELETE, request, Integer.class);
+			HttpEntity<Tareas> request = new HttpEntity<>(tareas);
+			createClient().exchange(buildUrl("/deleteTareas"), HttpMethod.DELETE, request, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error al eliminar tarea: " + e.getMessage());
+			LOGGER.error("Error al eliminar tarea: {}", e.getMessage());
 		}
-		
+
 		return new ModelAndView("redirect:/proyecto");
 	}
-	
+
 	@PostMapping("/verificarTarea")
-	public ResponseEntity<Integer> verificarTarea(@RequestBody Tareas paramName){
+	public ResponseEntity<Integer> verificarTarea(@RequestBody Tareas paramName) {
 		try {
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/addTareas";
-			RestTemplate template = new RestTemplate();
-			return template.postForEntity(urlservicebd, paramName, Integer.class);
+			return createClient().postForEntity(buildUrl(ENDPOINT_ADD_TAREAS), paramName, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error al verificar tarea: " + e.getMessage());
+			LOGGER.error("Error al verificar tarea: {}", e.getMessage());
 			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
-	
+
 	@PostMapping("/cambiosTareas")
-	public ResponseEntity<Integer> cambiosTareas(@RequestBody Tareas paramDatos){
+	public ResponseEntity<Integer> cambiosTareas(@RequestBody Tareas paramDatos) {
 		try {
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/addTareas";
-			RestTemplate template = new RestTemplate();
-			return template.postForEntity(urlservicebd, paramDatos, Integer.class);
+			return createClient().postForEntity(buildUrl(ENDPOINT_ADD_TAREAS), paramDatos, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error en cambios tareas: " + e.getMessage());
+			LOGGER.error("Error en cambios tareas: {}", e.getMessage());
 			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
-	
+
 	@PostMapping("/consultarTareas")
-	public ResponseEntity<Object> consultarTareas() {	
-		RestTemplate template = new RestTemplate();
-		String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/buscarTareas";
+	public ResponseEntity<Object> consultarTareas() {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		try {
-			Tareas[] response = template.postForObject(urlservicebd, headers, Tareas[].class);
+			Tareas[] response = createClient().postForObject(buildUrl("/buscarTareas"), headers, Tareas[].class);
 			List<Tareas> tareas = (response != null) ? Arrays.asList(response) : Collections.emptyList();
-			return new ResponseEntity<Object>(tareas, HttpStatus.OK);
+			return new ResponseEntity<>(tareas, HttpStatus.OK);
 		} catch (Exception e) {
-			System.err.println("Error al consultar tareas: " + e.getMessage());
+			LOGGER.error("Error al consultar tareas: {}", e.getMessage());
 			return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
 		}
 	}
-	
+
 	@PostMapping("/consultarComentarios")
-	public ResponseEntity<Object> consultarComentarios() {	
-		RestTemplate template = new RestTemplate();
-		String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/buscarComentarios";
+	public ResponseEntity<Object> consultarComentarios() {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		try {
-			Comentarios[] response = template.postForObject(urlservicebd, headers, Comentarios[].class);
+			Comentarios[] response = createClient().postForObject(buildUrl("/buscarComentarios"), headers, Comentarios[].class);
 			List<Comentarios> comentarios = (response != null) ? Arrays.asList(response) : Collections.emptyList();
-			return new ResponseEntity<Object>(comentarios, HttpStatus.OK);
+			return new ResponseEntity<>(comentarios, HttpStatus.OK);
 		} catch (Exception e) {
-			System.err.println("Error al consultar comentarios: " + e.getMessage());
+			LOGGER.error("Error al consultar comentarios: {}", e.getMessage());
 			return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
 		}
 	}
-	
+
 	@PostMapping("/updateAsignacion")
 	public ResponseEntity<Integer> updateAsignacion(@RequestBody Asignaciones asignacion) {
 		try {
-			RestTemplate template = new RestTemplate();
-			String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/updateAsignacion";
-			return template.postForEntity(urlservicebd, asignacion, Integer.class);
+			return createClient().postForEntity(buildUrl("/updateAsignacion"), asignacion, Integer.class);
 		} catch (Exception e) {
-			System.err.println("Error al actualizar asignación: " + e.getMessage());
+			LOGGER.error("Error al actualizar asignación: {}", e.getMessage());
 			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
 	@PostMapping("/consultarAsignaciones")
 	public ResponseEntity<Object> consultarAsignaciones() {
-		RestTemplate template = new RestTemplate();
-		String urlservicebd = (baseUrl != null ? baseUrl : "http://localhost:8081") + "/buscarAsignaciones";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		try {
-			Asignaciones[] response = template.postForObject(urlservicebd, headers, Asignaciones[].class);
+			Asignaciones[] response = createClient().postForObject(buildUrl("/buscarAsignaciones"), headers, Asignaciones[].class);
 			List<Asignaciones> lista = (response != null) ? Arrays.asList(response) : Collections.emptyList();
-			return new ResponseEntity<Object>(lista, HttpStatus.OK);
+			return new ResponseEntity<>(lista, HttpStatus.OK);
 		} catch (Exception e) {
-			System.err.println("Error al consultar asignaciones: " + e.getMessage());
+			LOGGER.error("Error al consultar asignaciones: {}", e.getMessage());
 			return new ResponseEntity<>(Collections.emptyList(), HttpStatus.SERVICE_UNAVAILABLE);
 		}
 	}
