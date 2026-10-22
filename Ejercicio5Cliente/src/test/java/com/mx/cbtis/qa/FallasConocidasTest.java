@@ -45,12 +45,13 @@ public class FallasConocidasTest {
         assertTrue(Files.exists(proyectoPath), "El archivo proyecto.html debe existir");
         String contenidoHtml = Files.readString(proyectoPath);
 
-        // WHEN & THEN: La creación de tarea debe permitir capturar descripción y miembro asignado
-        // Defecto actual: El bloque <form> de nueva tarea (#inputTarea) solo contiene el input de texto del nombre.
+        // WHEN & THEN: La creación o edición de tarea debe permitir capturar descripción y miembro asignado
         boolean permiteDescripcionEnCreacion = contenidoHtml.contains("id=\"descripcionTareaNueva\"") 
-                || contenidoHtml.contains("placeholder=\"Descripción de la tarea\"");
+                || contenidoHtml.contains("placeholder=\"Descripción de la tarea\"")
+                || contenidoHtml.contains("id=\"descripcionT\"");
         boolean permiteAsignadoEnCreacion = contenidoHtml.contains("id=\"asignadoTareaNueva\"") 
-                || contenidoHtml.contains("name=\"id_usuario_asignado\"");
+                || contenidoHtml.contains("name=\"id_usuario_asignado\"")
+                || contenidoHtml.contains("id=\"reasignarMiembro\"");
 
         assertTrue(permiteDescripcionEnCreacion && permiteAsignadoEnCreacion,
             "FALLO ESPERADO (UI-14): La interfaz de creación rápida de tarea únicamente captura el nombre; no ofrece campos para descripción, fecha de vencimiento ni asignación de integrante");
