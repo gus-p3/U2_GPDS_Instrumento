@@ -1,0 +1,26 @@
+✅ **Documento generado correctamente.**
+
+---
+
+## 📄 Resultado
+
+**Archivo:** [`Evidencia_Pruebas_Unitarias_COMPLETADA.docx`](file:///c:/Users/brand/Documentos/GIDS6102/Gestión del Proceso de Desarrollo de Software/Unidad 2/admin-proyectos/Ejercicio5MyAPIGestor/Evidencia_Pruebas_Unitarias_COMPLETADA.docx) **(3.84 MB)**
+
+---
+
+### Contenido del documento generado:
+
+| Sección | Contenido |
+|---|---|
+| **1. Información General** | Nombre del sistema, módulo, sprint, responsable, fecha, tecnología |
+| **2. Resumen Ejecutivo** | 27 casos ejecutados, 27 exitosos, 0 fallidos, **100% de éxito** |
+| **3. Detalle de Casos** | Tabla con UT-01 a UT-20 con ID, módulo, endpoint, método, descripción y estado |
+| **4. Evidencia Visual** | Capturas organizadas por módulo (Usuarios, Proyectos, Asignaciones, Tareas, Comentarios) |
+| **5. Firmas de Cierre** | Tabla de conformidad con nombre del desarrollador y fecha |
+
+### Capturas incluidas por módulo:
+- 🧑 **Usuarios** → 6 capturas (UT-01 a UT-06)
+- 📁 **Proyectos** → 6 capturas (UT-07 a UT-12)
+- 🔗 **Asignaciones** → 5 capturas (UT-13 a UT-17)
+- ✅ **Tareas** → 6 capturas (UT-18 a UT-23)
+- 💬 **Comentarios** → 4 capturas (UT-24 a UT-27)
