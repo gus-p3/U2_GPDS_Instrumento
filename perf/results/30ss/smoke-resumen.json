@@ -1,0 +1,20 @@
+{
+  "perfil": "smoke",
+  "base_url": "https://gestor-api-bgma.up.railway.app",
+  "rutas": [
+    "/buscarProyecto?id_proyecto=1",
+    "/buscarUsuario?id=131",
+    "/buscarTarea?id_tarea=199"
+  ],
+  "fin": "2026-11-23T01:56:42.568Z",
+  "duracion_ms": 30071.0308,
+  "vus_max": 1,
+  "total_requests": 24,
+  "throughput_rps": 0.7981103195172146,
+  "avg_ms": 183.64930416666667,
+  "med_ms": 128.36955,
+  "p90_ms": 288.4903699999999,
+  "p95_ms": 328.5094649999999,
+  "max_ms": 547.722,
+  "error_rate": 0
+}

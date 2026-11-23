@@ -1,0 +1,20 @@
+{
+  "perfil": "stress",
+  "base_url": "https://gestor-api-bgma.up.railway.app",
+  "rutas": [
+    "/buscarProyecto?id_proyecto=1",
+    "/buscarUsuario?id=131",
+    "/buscarTarea?id_tarea=199"
+  ],
+  "fin": "2026-11-23T02:12:45.819Z",
+  "duracion_ms": 301084.0717,
+  "vus_max": 50,
+  "total_requests": 8076,
+  "throughput_rps": 26.823072885924443,
+  "avg_ms": 167.8633397473993,
+  "med_ms": 105.0477,
+  "p90_ms": 395.8254,
+  "p95_ms": 455.38285,
+  "max_ms": 989.3639,
+  "error_rate": 0
+}

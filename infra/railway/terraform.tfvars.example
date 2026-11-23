@@ -1,0 +1,3 @@
+backend_repo  = "TU_USUARIO/NOMBRE_REPO_BACKEND"
+frontend_repo = "TU_USUARIO/NOMBRE_REPO_FRONTEND"
+domain_suffix = "tus-iniciales"

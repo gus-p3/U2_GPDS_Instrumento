@@ -1,0 +1,20 @@
+{
+  "perfil": "load",
+  "base_url": "https://gestor-api-bgma.up.railway.app",
+  "rutas": [
+    "/buscarProyecto?id_proyecto=1",
+    "/buscarUsuario?id=131",
+    "/buscarTarea?id_tarea=199"
+  ],
+  "fin": "2026-11-23T02:02:43.233Z",
+  "duracion_ms": 271019.0745,
+  "vus_max": 20,
+  "total_requests": 2744,
+  "throughput_rps": 10.124748618016552,
+  "avg_ms": 197.27313309037905,
+  "med_ms": 126.08085,
+  "p90_ms": 366.2676700000006,
+  "p95_ms": 493.2378,
+  "max_ms": 2612.8138,
+  "error_rate": 0
+}
