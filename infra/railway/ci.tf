@@ -35,6 +35,13 @@ resource "railway_variable" "sonar_db_password" {
   service_id     = railway_service.sonar_db.id
 }
 
+resource "railway_variable" "sonar_db_pgdata" {
+  name           = "PGDATA"
+  value          = "/var/lib/postgresql/data/pgdata"
+  environment_id = local.env_id
+  service_id     = railway_service.sonar_db.id
+}
+
 # ---------- SonarQube ----------
 resource "railway_service" "sonarqube" {
   name         = "sonarqube"
