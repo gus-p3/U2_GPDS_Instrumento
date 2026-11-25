@@ -18,3 +18,11 @@ output "grafana_admin_password" {
   value     = random_password.grafana_admin.result
   sensitive = true
 }
+
+output "jenkins_url" {
+  value = "https://${railway_service_domain.jenkins.domain}"
+}
+
+output "sonarqube_url" {
+  value = "https://${railway_service_domain.sonarqube.domain}"
+}
