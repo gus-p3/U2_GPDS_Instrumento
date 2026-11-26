@@ -66,7 +66,7 @@ resource "railway_variable" "db_password" {
 
 # ---------- Backend ----------
 resource "railway_service" "backend" {
-  name               = "backend"
+  name               = "backend-api"
   project_id         = railway_project.gestor.id
   source_repo        = var.backend_repo
   source_repo_branch = var.repo_branch
@@ -118,7 +118,7 @@ resource "railway_variable" "frontend_port" {
 
 resource "railway_variable" "frontend_backend_url" {
   name           = "BACKEND_URL"
-  value          = "http://$${{backend.RAILWAY_PRIVATE_DOMAIN}}:$${{backend.PORT}}"
+  value          = "http://$${{backend-api.RAILWAY_PRIVATE_DOMAIN}}:$${{backend-api.PORT}}"
   environment_id = local.env_id
   service_id     = railway_service.frontend.id
 }
