@@ -1,10 +1,19 @@
 pipeline {
     agent any
+    options {
+        skipDefaultCheckout(true)
+        buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '3'))
+    }
     parameters {
         booleanParam(name: 'DEPLOY_REMOTE_DB', defaultValue: false,
                      description: 'Reinicia dbgestor en Railway e importa el dump (requiere TCP Proxy abierto)')
     }
     stages {
+        stage('Clean Workspace') {
+            steps {
+                deleteDir()
+            }
+        }
         stage('Checkout SQL Dump') {
             steps {
                 git branch: 'main',
@@ -130,6 +139,7 @@ pipeline {
             archiveArtifacts artifacts: 'reportes/semgrep.json',
             allowEmptyArchive: true,
             fingerprint: true
+            deleteDir()
         }
     }
 }
